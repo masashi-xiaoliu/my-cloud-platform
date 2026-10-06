@@ -1,0 +1,16 @@
+# HPA を有効にする Component（Phase 8〜 / Case Study CR-1）。
+# HPA を使うときは Deployment の spec.replicas を Git から消す。
+# ※ overlays/<env>/patch-deployment.yaml に replicas があると、Component の後に overlay の patch が
+#   適用されて replicas が復活する。必ずそちらの replicas 行も削除する（CI の check-manifests が検出する）。
+# 消さないと「Argo CD が replicas を Git の値に戻す ⇄ HPA が増やす」の綱引きになる。
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - hpa.yaml
+patches:
+  - target:
+      kind: Deployment
+      name: hello-go
+    patch: |-
+      - op: remove
+        path: /spec/replicas

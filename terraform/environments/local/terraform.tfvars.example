@@ -1,0 +1,6 @@
+# cp terraform.tfvars.example terraform.tfvars して編集する（terraform.tfvars は .gitignore 済み）
+worker_count      = 1
+enable_monitoring = false
+# chart_versions = {
+#   argocd = "7.7.0"
+# }

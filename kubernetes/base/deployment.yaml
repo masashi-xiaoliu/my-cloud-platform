@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-go
+spec:
+  # ★ LAB T01: Replica 数。環境ごとの値は overlays/<env>/patch-deployment.yaml で上書きする。
+  replicas: 1
+  revisionHistoryLimit: 5
+  # ★ LAB T10: Rolling Update 戦略。maxSurge / maxUnavailable を変えると入れ替わり方が変わる。
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      annotations:
+        # ServiceMonitor を使わない場合のスクレイプ指定（参考）
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: /metrics
+    spec:
+      # ★ LAB T12: SIGTERM から強制終了までの猶予。短すぎると処理中のリクエストが切れる。
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: hello-go
+          # ★ LAB T08: イメージ名とタグは overlays/<env>/kustomization.yaml の images: で決まる。
+          image: hello-go
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: hello-go-config
+            - secretRef:
+                name: hello-go-secret
+                optional: true
+          # ★ LAB T02-T05: requests はスケジューリングの予約量、limits は上限。
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+          # ★ LAB T11: Probe。path / port / 秒数を壊すと Ready にならない・再起動ループになる。
+          startupProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

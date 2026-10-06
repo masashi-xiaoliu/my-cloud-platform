@@ -1,0 +1,21 @@
+# App of Apps: この 1 つを手で apply すると、argocd/applications 配下の Application が
+# すべて Argo CD に登録される。以後 Application の追加・削除も Git で行う。
+#   kubectl apply -n argocd -f argocd/bootstrap/root.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/masashi-xiaoliu/my-cloud-platform.git
+    targetRevision: main
+    path: argocd/applications
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

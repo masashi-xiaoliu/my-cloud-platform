@@ -1,0 +1,98 @@
+# Deploy (GitOps): クラスタを直接触らず、「どの image tag を動かすか」を Git に書き込むだけ。
+# 実際の反映は Argo CD が Git の変更を検知して行う。
+#   dev           : main に直接コミット → Argo CD が自動 Sync
+#   staging / prod: PR を作成 → 人がレビューして Merge → (prod は Argo CD で手動 Sync)
+# 手動: Actions > Deploy > Run workflow > environment と image_tag を指定
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "デプロイ先"
+        type: choice
+        options: [dev, staging, prod]
+        default: dev
+      image_tag:
+        description: "デプロイする image tag（例: v1.1.0 / sha-abc1234）"
+        required: true
+  workflow_call:
+    inputs:
+      environment: { type: string, required: true }
+      image_tag: { type: string, required: true }
+      reason: { type: string, required: false, default: deploy }
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: read
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  update-manifest:
+    name: Update ${{ inputs.environment }} image tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolve image
+        id: img
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "ref=ghcr.io/$owner/hello-go:${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+
+      - name: Guardrail - image exists in registry
+        # 存在しないタグを Git に書くと ImagePullBackOff になる。それを CD の手前で止める。
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          if ! docker manifest inspect "${{ steps.img.outputs.ref }}" > /dev/null; then
+            echo "::error::Image ${{ steps.img.outputs.ref }} が Registry に存在しません"
+            exit 1
+          fi
+
+      - name: Install kustomize
+        run: |
+          curl -sSL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz | tar xz
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Set image tag in overlay
+        id: edit
+        working-directory: kubernetes/overlays/${{ inputs.environment }}
+        run: |
+          before=$(grep newTag kustomization.yaml | awk '{print $2}')
+          kustomize edit set image hello-go=${{ steps.img.outputs.ref }}
+          echo "before=$before" >> "$GITHUB_OUTPUT"
+          git diff --stat
+          if git diff --quiet; then echo "changed=false" >> "$GITHUB_OUTPUT"; else echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Commit (dev) or open PR (staging/prod)
+        if: steps.edit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENV_NAME: ${{ inputs.environment }}
+          TAG: ${{ inputs.image_tag }}
+          BEFORE: ${{ steps.edit.outputs.before }}
+          REASON: ${{ inputs.reason || 'deploy' }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          msg="${REASON}(${ENV_NAME}): hello-go ${BEFORE} -> ${TAG}"
+          if [ "$ENV_NAME" = "dev" ]; then
+            git commit -am "$msg"
+            git push origin HEAD:main
+            echo "### ✅ dev に直接コミットしました。Argo CD が数分以内に自動 Sync します。" >> "$GITHUB_STEP_SUMMARY"
+          else
+            branch="${REASON}/${ENV_NAME}-${TAG}-${GITHUB_RUN_ID}"
+            git checkout -b "$branch"
+            git commit -am "$msg"
+            git push origin "$branch"
+            gh pr create --base main --head "$branch" --title "$msg" \
+              --body "$(printf 'Environment: **%s**\n\nImage: `%s` → `%s`\n\nMerge 後の確認:\n- Argo CD: hello-go-%s が Synced / Healthy\n- kubectl -n mcp-%s get pods\n- curl http://hello%s.localtest.me/info' "$ENV_NAME" "$BEFORE" "$TAG" "$ENV_NAME" "$ENV_NAME" "$( [ "$ENV_NAME" = prod ] && echo '' || echo "-$ENV_NAME")")"
+            echo "### 📝 PR を作成しました。レビューして Merge してください。" >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -1,0 +1,24 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hello-go
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hello-go
+  # ★ LAB T06: 最小・最大 Pod 数
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          # ★ LAB T06: CPU 使用率の目標値（requests に対する %）
+          averageUtilization: 70
+  behavior:
+    scaleDown:
+      # ★ LAB T06: スケールイン前の待機時間。短くするとバタつく（flapping）。
+      stabilizationWindowSeconds: 60

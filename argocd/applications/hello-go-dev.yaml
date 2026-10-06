@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello-go-dev
+  namespace: argocd
+  labels:
+    environment: dev
+spec:
+  project: my-cloud-platform
+  source:
+    repoURL: https://github.com/masashi-xiaoliu/my-cloud-platform.git
+    # ★ LAB I14: 監視するブランチ。存在しないブランチ名にすると ComparisonError。
+    targetRevision: main
+    path: kubernetes/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mcp-dev
+  syncPolicy:
+    # Git が変わったら自動で反映する（GitOps の基本形）
+    automated:
+      # ★ LAB C06: prune=false にすると Git から消したリソースがクラスタに残り続ける
+      prune: true
+      # ★ LAB C06: selfHeal=true だと kubectl で手修正しても Git の状態に戻される
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 1m

@@ -1,0 +1,14 @@
+# Case Study CR-2「DB が必要になった」で有効化する Component（20% 側）。
+# ローカル / dev では StatefulSet の PostgreSQL、prod では Cloud SQL を使う想定（docs/case-study 参照）。
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - statefulset.yaml
+  - service.yaml
+secretGenerator:
+  - name: postgres-auth
+    literals:
+      # 学習用ダミー。実案件では Secret Manager + External Secrets 等を使う（docs/adr/0006）。
+      - POSTGRES_PASSWORD=dev-only-password
+      - POSTGRES_USER=app
+      - POSTGRES_DB=app

@@ -1,0 +1,23 @@
+# kubernetes/base — 全環境共通の hello-go マニフェスト（80% 側の型）。
+# 環境ごとの差分（replicas, image tag, 設定値, リソース量）は overlays/<env> に書く。
+# 確認: kustomize build kubernetes/overlays/dev   （実際に適用される最終 YAML が見える）
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - includeSelectors: true
+    pairs:
+      app.kubernetes.io/name: hello-go
+      app.kubernetes.io/part-of: my-cloud-platform
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+# ConfigMap は Generator で作る。中身が変わると名前のハッシュが変わり、
+# Deployment の参照名も変わる → Pod が自動でローリング更新される（Tuning Lab T07）。
+configMapGenerator:
+  - name: hello-go-config
+    envs:
+      - config.env

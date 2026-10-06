@@ -1,0 +1,11 @@
+# ノードのメンテナンス（drain）中でも最低限の Pod 数を維持する。
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: hello-go
+spec:
+  # ★ LAB T15: replicas=1 で minAvailable=1 にすると drain が永遠に終わらない。
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hello-go

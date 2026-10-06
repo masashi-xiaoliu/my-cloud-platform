@@ -1,0 +1,12 @@
+# Phase 3 で手作業で使う kind 設定（Phase 6 では Terraform の modules/kind-cluster が同じ内容を作る）
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: my-cloud-platform
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080   # Traefik (HTTP) の NodePort
+        hostPort: 80
+      - containerPort: 30443   # Traefik (HTTPS) の NodePort
+        hostPort: 443
+  - role: worker

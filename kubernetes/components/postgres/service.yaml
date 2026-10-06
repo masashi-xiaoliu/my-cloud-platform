@@ -1,0 +1,12 @@
+# Headless Service: postgres-0.postgres.<ns>.svc.cluster.local で個々の Pod を名前解決できる
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/component: postgres
+  ports:
+    - name: pg
+      port: 5432

@@ -1,0 +1,8 @@
+# Prometheus Operator の CRD（ServiceMonitor / PrometheusRule）を使う Component。
+# kube-prometheus-stack を入れる前（Phase 8 より前）に有効化すると
+# "no matches for kind ServiceMonitor" で Sync 失敗する（Incident Lab I14 の題材）。
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - servicemonitor.yaml
+  - prometheusrule.yaml

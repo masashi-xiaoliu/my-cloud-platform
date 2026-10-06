@@ -1,0 +1,22 @@
+# AppProject: このプロジェクトの Application が「どのリポジトリから」「どの Namespace に」
+# デプロイしてよいかを制限する（誤デプロイ防止のガードレール）。
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: my-cloud-platform
+  namespace: argocd
+spec:
+  description: My Cloud Platform workloads
+  sourceRepos:
+    - https://github.com/masashi-xiaoliu/my-cloud-platform.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: mcp-*
+    - server: https://kubernetes.default.svc
+      namespace: monitoring
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

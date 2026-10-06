@@ -1,0 +1,4 @@
+- op: replace
+  path: /spec/rules/0/host
+  # ★ LAB T14: ホスト名。*.localtest.me は常に 127.0.0.1 に解決される公開 DNS 名。
+  value: hello-local.localtest.me

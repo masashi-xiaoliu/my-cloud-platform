@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello-go
+spec:
+  # ★ LAB T14: IngressClass。存在しないクラス名にするとどの Controller も処理しない。
+  ingressClassName: traefik
+  rules:
+    # ★ LAB T14: host は overlays/<env>/patch-ingress.yaml で上書きする。
+    - host: hello.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hello-go
+                port:
+                  name: http

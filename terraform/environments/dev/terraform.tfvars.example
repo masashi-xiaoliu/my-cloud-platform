@@ -1,0 +1,7 @@
+project_id         = "your-gcp-project-id"
+billing_account_id = "" # 例: "012345-6789AB-CDEF01"
+monthly_budget     = 3000
+github_repository  = "" # 例: "your-name/my-cloud-platform"
+node_count         = 1
+machine_type       = "e2-medium"
+spot               = true

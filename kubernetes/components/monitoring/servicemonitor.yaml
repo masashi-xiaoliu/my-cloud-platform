@@ -1,0 +1,13 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: hello-go
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hello-go
+  endpoints:
+    - port: http
+      path: /metrics
+      # ★ LAB M05: スクレイプ間隔。長くするとグラフが粗くなり、短くすると Prometheus の負荷が上がる。
+      interval: 15s

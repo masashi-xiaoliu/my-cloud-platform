@@ -1,0 +1,26 @@
+# 外形監視もどき CronJob: 1 分ごとに / を叩き、失敗したら Job が Failed になる。
+#   適用: kubectl -n mcp-dev apply -f kubernetes/jobs/smoke-cronjob.yaml
+#   確認: kubectl -n mcp-dev get cronjob,jobs   /   kubectl -n mcp-dev logs job/<job名>
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: smoke
+spec:
+  # ★ LAB T19: 実行間隔（cron 形式）。"*/5 * * * *" にすると 5 分ごと。
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: smoke
+              image: busybox:1.36
+              command: ["sh", "-c", "wget -q -T 3 -O - http://hello-go/ && echo SMOKE_OK"]
+              resources:
+                requests: { cpu: 5m, memory: 8Mi }
+                limits: { cpu: 50m, memory: 16Mi }

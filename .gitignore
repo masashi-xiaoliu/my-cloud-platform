@@ -1,0 +1,15 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+.terraform.lock.hcl.bak
+# local
+.chaos/
+*.kubeconfig
+my-cloud-platform-config
+.DS_Store
+# go
+apps/hello-go/hello-go

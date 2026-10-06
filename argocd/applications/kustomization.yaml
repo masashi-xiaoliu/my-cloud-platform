@@ -1,0 +1,10 @@
+# root Application（argocd/bootstrap/root.yaml）がこのディレクトリを読む。
+# ★ Phase ごとに有効化する Application をここに追加する。
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../projects
+  - hello-go-dev.yaml
+  - hello-go-staging.yaml
+  - hello-go-prod.yaml
+#  - monitoring-dashboards.yaml   # Phase 8 でコメント解除

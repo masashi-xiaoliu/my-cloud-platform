@@ -1,0 +1,40 @@
+# overlays/prod — Argo CD は自動 Sync しない（人が Argo CD UI で Sync ボタンを押す）。
+# 本番反映には PR レビュー + 手動 Sync の 2 段階の承認が必要、という運用を体験する。
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mcp-prod
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+# ★ LAB T08: デプロイするイメージ。CD (deploy.yml) が newTag を書き換えてコミットする。
+# 手で存在しないタグ（例: v999.0.0）にすると ImagePullBackOff（Incident Lab I02）。
+images:
+  - name: hello-go
+    newName: ghcr.io/masashi-xiaoliu/hello-go
+    newTag: v1.0.0
+
+configMapGenerator:
+  - name: hello-go-config
+    behavior: merge
+    envs:
+      - config.env
+
+secretGenerator:
+  - name: hello-go-secret
+    envs:
+      - secret.env
+
+patches:
+  - path: patch-deployment.yaml
+  - path: patch-ingress.yaml
+    target:
+      kind: Ingress
+      name: hello-go
+
+components:
+  - ../../components/pdb
+#  - ../../components/hpa          # Case Study CR-1 でコメント解除
+#  - ../../components/monitoring   # Phase 8 でコメント解除

@@ -1,0 +1,40 @@
+# 負荷生成 Job（HPA / CPU limit / Grafana の教材）。
+#   起動: kubectl -n mcp-dev apply -f kubernetes/jobs/loadgen-job.yaml
+#   観察: kubectl -n mcp-dev get hpa -w   /   kubectl -n mcp-dev top pods
+#   削除: kubectl -n mcp-dev delete job loadgen
+# 何回でもやり直せるよう、Argo CD 管理外（overlay に含めない）にしてある。
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadgen
+spec:
+  # ★ LAB T06 / M02: 同時に動く負荷 Pod 数。増やすほど CPU が上がる。
+  parallelism: 4
+  completions: 4
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: loadgen
+          image: busybox:1.36
+          env:
+            # ★ LAB: 1 リクエストあたりの CPU 消費 ms と、リクエスト回数
+            - name: BURN_MS
+              value: "50"
+            - name: REQUESTS
+              value: "3000"
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "start: $REQUESTS requests to /burn?ms=$BURN_MS"
+              i=0; ok=0; ng=0
+              while [ $i -lt $REQUESTS ]; do
+                if wget -q -T 5 -O /dev/null "http://hello-go/burn?ms=$BURN_MS"; then ok=$((ok+1)); else ng=$((ng+1)); fi
+                i=$((i+1))
+              done
+              echo "done: ok=$ok ng=$ng"
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }

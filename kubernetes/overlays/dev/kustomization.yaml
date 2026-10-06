@@ -1,0 +1,41 @@
+# overlays/dev — Argo CD が自動 Sync する環境。main にマージされた内容がそのまま反映される。
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mcp-dev
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+# ★ LAB T08: デプロイするイメージ。CD (deploy.yml) が newTag を書き換えてコミットする。
+# 手で存在しないタグ（例: v999.0.0）にすると ImagePullBackOff（Incident Lab I02）。
+images:
+  - name: hello-go
+    newName: ghcr.io/masashi-xiaoliu/hello-go
+    newTag: v1.0.0
+
+configMapGenerator:
+  - name: hello-go-config
+    behavior: merge
+    envs:
+      - config.env
+
+secretGenerator:
+  - name: hello-go-secret
+    envs:
+      - secret.env
+
+patches:
+  - path: patch-deployment.yaml
+  - path: patch-ingress.yaml
+    target:
+      kind: Ingress
+      name: hello-go
+
+# ★ Phase ごとにコメントを外して機能を有効化する。
+components: []
+#  - ../../components/hpa          # Phase 8 / Tuning Lab T06
+#  - ../../components/monitoring   # Phase 8（kube-prometheus-stack 導入後でないと Sync 失敗）
+#  - ../../components/pdb          # Tuning Lab T15
+#  - ../../components/postgres     # Case Study CR-2

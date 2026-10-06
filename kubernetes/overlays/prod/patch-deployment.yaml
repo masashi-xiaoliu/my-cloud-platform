@@ -1,0 +1,24 @@
+# prod 環境の Deployment 差分。ここが Tuning Lab で最も触るファイル。
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-go
+spec:
+  # ★ LAB T06: components/hpa を有効にするときは、この replicas 行ごと削除すること（HPA と綱引きになる）。
+  # ★ LAB T01: この値を 3 → 3 → 10 と変えて Pod 数の変化を確認する。
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: hello-go
+          resources:
+            requests:
+              # ★ LAB T02: CPU requests（スケジューラが「予約」する量）
+              cpu: 100m
+              # ★ LAB T04: Memory requests
+              memory: 64Mi
+            limits:
+              # ★ LAB T03: CPU limits（超えると throttling。Pod は殺されない）
+              cpu: 500m
+              # ★ LAB T05: Memory limits（超えると OOMKilled。Pod は再起動される）
+              memory: 128Mi

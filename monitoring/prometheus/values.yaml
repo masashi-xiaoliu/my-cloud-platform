@@ -1,0 +1,31 @@
+# kube-prometheus-stack に追加で渡す値（Terraform の platform-addons モジュールが読み込む）。
+# 変更後は terraform plan → apply で反映（helm upgrade が走る）。
+prometheus:
+  prometheusSpec:
+    # ★ LAB M05: スクレイプ間隔のデフォルト
+    scrapeInterval: 15s
+    # ★ LAB M07: データ保持期間。長くするとディスクを多く使う
+    retention: 2d
+    resources:
+      requests: { cpu: 100m, memory: 400Mi }
+      limits: { memory: 1Gi }
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: { cpu: 10m, memory: 32Mi }
+
+grafana:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+
+# kind ではコントロールプレーンのメトリクスエンドポイントが外から見えず
+# "down" になるだけなので収集を止める（GKE でもマネージドのため不要）。
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false

@@ -1,0 +1,38 @@
+# overlays/staging — Argo CD が自動 Sync。dev で確認した image tag を PR で昇格させる。
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mcp-staging
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+# ★ LAB T08: デプロイするイメージ。CD (deploy.yml) が newTag を書き換えてコミットする。
+# 手で存在しないタグ（例: v999.0.0）にすると ImagePullBackOff（Incident Lab I02）。
+images:
+  - name: hello-go
+    newName: ghcr.io/masashi-xiaoliu/hello-go
+    newTag: v1.0.0
+
+configMapGenerator:
+  - name: hello-go-config
+    behavior: merge
+    envs:
+      - config.env
+
+secretGenerator:
+  - name: hello-go-secret
+    envs:
+      - secret.env
+
+patches:
+  - path: patch-deployment.yaml
+  - path: patch-ingress.yaml
+    target:
+      kind: Ingress
+      name: hello-go
+
+components:
+  - ../../components/pdb
+#  - ../../components/monitoring   # Phase 8 でコメント解除

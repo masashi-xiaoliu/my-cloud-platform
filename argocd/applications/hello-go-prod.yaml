@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello-go-prod
+  namespace: argocd
+  labels:
+    environment: prod
+spec:
+  project: my-cloud-platform
+  source:
+    repoURL: https://github.com/masashi-xiaoliu/my-cloud-platform.git
+    # ★ LAB I14: 監視するブランチ。存在しないブランチ名にすると ComparisonError。
+    targetRevision: main
+    path: kubernetes/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mcp-prod
+  # prod は automated を付けない = Argo CD UI で人が Sync ボタンを押して初めて反映される。
+  syncPolicy:
+    syncOptions:
+      - ApplyOutOfSyncOnly=true

@@ -1,0 +1,63 @@
+# Rollback (GitOps): 「Git を前の状態に戻す」ことで復旧する。
+# ⚠ kubectl rollout undo は使わない。Argo CD の selfHeal が Git の（壊れた）状態に戻してしまうため。
+#   mode=revert-last-deploy : 直近の deploy コミット（overlay の image 変更）を git revert
+#   mode=set-tag            : 指定した既知の正常タグに書き戻す
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [dev, staging, prod]
+        default: dev
+      mode:
+        type: choice
+        options: [revert-last-deploy, set-tag]
+        default: revert-last-deploy
+      image_tag:
+        description: "mode=set-tag のときに戻すタグ（例: v1.0.0）"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: read
+
+jobs:
+  revert:
+    if: inputs.mode == 'revert-last-deploy'
+    name: Revert last deploy commit (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 50
+      - name: Find & revert
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENV_NAME: ${{ inputs.environment }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          sha=$(git log -n1 --format=%H -- kubernetes/overlays/$ENV_NAME/kustomization.yaml)
+          echo "Reverting: $(git log -n1 --format='%h %s' $sha)" | tee -a "$GITHUB_STEP_SUMMARY"
+          git revert --no-edit "$sha"
+          if [ "$ENV_NAME" = "dev" ]; then
+            git push origin HEAD:main
+          else
+            branch="rollback/${ENV_NAME}-${GITHUB_RUN_ID}"
+            git checkout -b "$branch" && git push origin "$branch"
+            gh pr create --base main --head "$branch" --title "rollback(${ENV_NAME}): revert $(git log -n1 --format=%h $sha)" \
+              --body "Incident 対応のための Rollback PR です。Merge 後、Argo CD で Synced/Healthy と Pod の version を確認してください。"
+          fi
+
+  set-tag:
+    if: inputs.mode == 'set-tag'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: ${{ inputs.environment }}
+      image_tag: ${{ inputs.image_tag }}
+      reason: rollback
+    secrets: inherit

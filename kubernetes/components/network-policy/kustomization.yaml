@@ -1,0 +1,6 @@
+# 注意: kind 標準 CNI (kindnet) は NetworkPolicy を強制しない。
+# 効果を確認するのは GKE (Dataplane V2) か、Calico/Cilium を入れた kind で行う。
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - networkpolicy.yaml
