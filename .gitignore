@@ -13,3 +13,7 @@ my-cloud-platform-config
 .DS_Store
 # go
 apps/hello-go/hello-go
+
+# python
+__pycache__/
+*.pyc
