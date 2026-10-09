@@ -70,23 +70,9 @@ Go 製の極小 Web API（`Hello from My Cloud Platform`）を題材に、**Dock
 
 ## 4. Architecture
 
-```mermaid
-flowchart LR
-  dev([Developer]) -- PR --> gh[(GitHub)]
-  gh -- push / PR --> ci[Actions: CI]
-  gh -- merge --> build[Actions: Build]
-  build --> reg[(GHCR / Artifact Registry)]
-  build -- "deploy.yml: image tag を Git に書く" --> gh
-  argo[Argo CD] -- "poll overlays/*" --> gh
-  subgraph k8s["Kubernetes (kind → GKE)"]
-    argo -- apply --> app[hello-go]
-    traefik[Traefik Ingress] --> app
-    prom[Prometheus] -- scrape --> app
-    graf[Grafana] --> prom
-  end
-  reg -- pull --> app
-  tf[Terraform] -- "cluster / network / IAM / add-ons" --> k8s
-```
+[![My Cloud Platform インフラ構成図（GCP / Phase 7 以降）](docs/images/architecture.png)](docs/images/architecture.png)
+
+> 画像をクリックすると原寸で表示されます。ローカル（kind）環境では Google Cloud〜Subnet の枠が「kind クラスタ（Docker 上）」に、Cloud Load Balancing が「localhost:80 → NodePort」に置き換わります。点線の箱は任意 / 発展の要素です。
 
 | 誰が | 何を適用するか | 頻度 |
 |---|---|---|
