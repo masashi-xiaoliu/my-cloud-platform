@@ -15,9 +15,9 @@ on:
         required: false
         default: ""
       deploy_to_dev:
-        description: "ビルド後に dev へデプロイする"
+        description: "ビルド後に dev へデプロイする（Phase 5 以降）"
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: write        # deploy.yml が overlay を書き換えて push するため
@@ -72,7 +72,11 @@ jobs:
   deploy-dev:
     name: Deploy to dev
     needs: build
-    if: github.event_name != 'workflow_dispatch' || inputs.deploy_to_dev
+    # 自動デプロイは Phase 5（Argo CD 導入後）から有効にする。
+    # 有効化: Settings > Secrets and variables > Actions > Variables に AUTO_DEPLOY_DEV = true を追加
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.deploy_to_dev) ||
+      (github.event_name != 'workflow_dispatch' && vars.AUTO_DEPLOY_DEV == 'true')
     uses: ./.github/workflows/deploy.yml
     with:
       environment: dev

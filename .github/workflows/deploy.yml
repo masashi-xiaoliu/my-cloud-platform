@@ -65,7 +65,8 @@ jobs:
         id: edit
         working-directory: kubernetes/overlays/${{ inputs.environment }}
         run: |
-          before=$(grep newTag kustomization.yaml | awk '{print $2}')
+          # コメント行の「newTag」を拾わないよう、行頭が newTag: の行だけを読む
+          before=$(awk '/^[[:space:]]*newTag:/ {print $2; exit}' kustomization.yaml)
           kustomize edit set image hello-go=${{ steps.img.outputs.ref }}
           echo "before=$before" >> "$GITHUB_OUTPUT"
           git diff --stat
